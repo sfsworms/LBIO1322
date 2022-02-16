@@ -1,0 +1,33 @@
+---
+title: "Analyse de cinétique enzymatique"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+# Ce chunk de code contient des libraries qui rendent l'utilisation de R plus agréable.
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analyse de cinetique.
+
+La vitesse d'une enzyme Michaelienne est donnée par la formule v = kcat.[E].([S]/(Km+[S])) où v est la vitesse, [E] la concentration en substrat, [S] la concentration en substrat, kcat la constante de vitesse et Km la constante de Michaelis. kcat représente la vitesse a laquelle l'enzyme effectue sa réaction. Km est une mesure de l'affinitié de l'enzyme pour son substrat: au plus Km est bas, au plus l'affinité de l'enzyme pour son substrat est élevée.
+
+On remarque que la vitesse de la réaction augmente lorsque [S] augmente, jusqu'à tendre vers un un maximum quand [S] >>> Km. On remarque également que lorsque [S] est égal à Km, la réaction procède à la moitié de sa vitesse maximale. 
+
+Pour déterminer les paramètre Michaélien de l'enzyme, il est nécéssaire d'effectuer une série de mesure de vitesse à des [S] différentes. Une régression permet ensuite de trouver les valeurs de Km et kcat qui expliquent le mieux les données observées. 
+
+
+
+```{r libraries echo=FALSE}
+library(tidyverse)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
