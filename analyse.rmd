@@ -3,9 +3,9 @@ title: "Analyse de cinétique enzymatique"
 output: html_document
 ---
 
-```{r setup, include=FALSE, echo=FALSE}
-# Ce chunk de code contient des libraries qui rendent l'utilisation de R plus agréable.
-knitr::opts_chunk$set(echo = TRUE)
+```{r libraries, include=FALSE, echo=FALSE}
+# Le package tidyverse facilite le traitement des données dans R. Si il n'est pas installé, il peut être installé en tapant "install.packages("tidyverse")" dans la console. 
+library(tidyverse)
 ```
 
 ## Analyse de cinetique.
@@ -16,18 +16,45 @@ On remarque que la vitesse de la réaction augmente lorsque [S] augmente, jusqu'
 
 Pour déterminer les paramètre Michaélien de l'enzyme, il est nécéssaire d'effectuer une série de mesure de vitesse à des [S] différentes. Une régression permet ensuite de trouver les valeurs de Km et kcat qui expliquent le mieux les données observées. 
 
+Un exemple avec des données fictives va être dévellopé ci-dessous. Le code est adapté de [Huitema et al. 2018](https://doi.org/10.1101/316588).
 
+## Exemple
 
-```{r libraries echo=FALSE}
-library(tidyverse)
+```{r}
+# Dans un document RMarkdown comme celui-ci du code R peut être insérer dans des 'chunk'. Le code sera executé au moment où le document est 'knit'. Par défaut, le code et sont résultat seront présent dans le document final. Vous pouvez aussi executer une ligne de code en tapant ctrl+enter ou tout le code en tapant ctrl+maj+enter.
+
+#Ici nous entrons simplement une série de vitesse et de concentration que nous allons utiliser. Nous les entrons ensuite dans un data frame pour faciliter l'utilisation. 
+
+vitesse <- c(0.6,1.1,2.1,2.3,3.7,3.,4.3,4.8,5.3,6.0,5.1,5.7,5.8)
+concentration <- c(0.5,1,2.5,3.5,5,7.5,10,15,25,50,70,75,100)
+
+test.df <- data.frame(concentration, vitesse) 
+
+test.df
 ```
 
-## Including Plots
+Un bon réflexe avec de nouvelles données est de commencer par les répresenter sur un graphique.
 
-You can also embed plots, for example:
+```{r plot}
+#Pour accéder aux données au sein d'un data frame, on peut utiliser l'opérateur '$'. 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+plot(test.df$concentration, test.df$vitesse)
+```
+On voit bien la tendance décrite plus haut, où la vitesse augmente quand la concentration en substrat augmente avant d'atteindre un plateau. Afin d'en déduire les paramètre michaelien, nous allons demander à R de fitter l'équation de MM aux données à l'aide d'un ajustement des moindres carrés non linéaire ("nonlinear least-squares fitting").Contrairement à la régression linéaire, il n'y a pas de solution analytique, les paramètre sont optimisés sur base de valeurs que nous estimons à l'oeuil. Ici nous voyons que la vitesse maximale est d'environ 6 et le Km (la concentration où V = Vmax/2) environ 5. La fonction nls() retourne un objet modèle que nous pouvons interroger pour obtenir les paramètres Michaelien.
+
+
+```{r}
+mm.nls <- nls(test.df$vitesse ~ (Vmax * test.df$concentration / (Km + test.df$concentration)), data=test.df, start=list(Km=5, Vmax=6)) 
+summary(mm.nls)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Pour tester la validité des paramètres, nous pouvons calculer la vitesse théorique pour chaque concentration et rajouter celà sur le graphique.
+
+```{ echo=FALSE}
+plot(test.df$concentration, test.df$vitesse)
+x <- c(0:100)
+y <- (6.069*x/(4.701+x))
+lines(x, y, lty="dotted", col="red")
+
+```
+
