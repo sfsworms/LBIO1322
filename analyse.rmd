@@ -50,7 +50,7 @@ summary(mm.nls)
 
 Pour tester la validité des paramètres, nous pouvons calculer la vitesse théorique pour chaque concentration et rajouter celà sur le graphique.
 
-```{ echo=FALSE}
+```{r echo=FALSE}
 plot(test.df$concentration, test.df$vitesse)
 x <- c(0:100)
 y <- (6.069*x/(4.701+x))
@@ -58,3 +58,40 @@ lines(x, y, lty="dotted", col="red")
 
 ```
 
+## Determination des vitesses
+
+Les vitesses initiales sont déterminée en prenant la pente initiale. Cela peut être fait sur excel, mais également sur R. 
+
+```{r}
+dossier <- "C:/Users/worms/Desktop/LBIO1322"
+data <- read.csv(paste(dossier,"1218.CSV",sep = "/"),
+                 skip = 21, #Le début du fichier contient des détails sur l'expérience
+                 ) %>%
+            head(.,-2) %>% #Les deux dernières lignes ne contiennent pas de données 
+            select(.,1:2) %>% #Prend les deux premières colonnes
+            rename(.,"time" = "HH.MM.SS", "abs" = "Abs") #renomme les colonnes
+
+#Le temps est exprimé dans un format compliqué, mais il peut être converti en un objet "temp". On peut ensuite extraire les minutes et les secondes. mutate() permet de modifier un data frame
+data <- data %>% 
+            mutate(time = strptime(time, format = "%H:%M:%S")) %>%
+            mutate(time = minute(time)*60 + second(time))
+
+#On peut ensuite faire un graphe pour choisir la section linéaire de la courbe
+
+plot(data$time,data$abs)
+
+#Puis faire une regression linéaire sur la section d'intérêt 
+regressionLineaire <- data %>% 
+      filter(time >= 10) %>%
+      filter(time <= 20) %>%
+      lm(abs ~time ,.)
+      
+# On peut trouver la pente en allant voir les coefficient:
+regressionLineaire$coefficients
+
+#Et verifier sur le graphe que ça colle
+plot(data$time,data$abs)
+abline(regressionLineaire)
+```
+
+Attention que la vitesse obtenue est une vitesse en absorbance/seconde. Pour trouver la vitesse en mol/seconde, vous devez utiliser le coefficient d'extinction molaire de la nitrocéfine à 482 nm, 15900 M-1cm-1. 
