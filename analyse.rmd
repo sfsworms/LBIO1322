@@ -8,6 +8,45 @@ output: html_document
 library(tidyverse)
 ```
 
+
+## Determination des vitesses
+
+Les vitesses initiales sont déterminée en prenant la pente initiale. Cela peut être fait sur excel, mais également sur R. 
+
+```{r}
+dossier <- "C:/Users/worms/Desktop/LBIO1322"
+data <- read.csv(paste(dossier,"1218.CSV",sep = "/"),
+                 skip = 21, #Le début du fichier contient des détails sur l'expérience
+                 ) %>%
+            head(.,-2) %>% #Les deux dernières lignes ne contiennent pas de données 
+            select(.,1:2) %>% #Prend les deux premières colonnes
+            rename(.,"time" = "HH.MM.SS", "abs" = "Abs") #renomme les colonnes
+
+#Le temps est exprimé dans un format compliqué, mais il peut être converti en un objet "temp". On peut ensuite extraire les minutes et les secondes. mutate() permet de modifier un data frame
+data <- data %>% 
+            mutate(time = strptime(time, format = "%H:%M:%S")) %>%
+            mutate(time = lubridate::minute(time)*60 + lubridate::second(time))
+
+#On peut ensuite faire un graphe pour choisir la section linéaire de la courbe
+
+plot(data$time,data$abs)
+
+#Puis faire une regression linéaire sur la section d'intérêt 
+regressionLineaire <- data %>% 
+      filter(time >= 10) %>%
+      filter(time <= 20) %>%
+      lm(abs ~time ,.)
+      
+# On peut trouver la pente en allant voir les coefficient:
+regressionLineaire$coefficients
+
+#Et verifier sur le graphe que ça colle
+plot(data$time,data$abs)
+abline(regressionLineaire)
+```
+
+Attention que la vitesse obtenue est une vitesse en absorbance/seconde. Pour trouver la vitesse en mol/seconde, vous devez utiliser le coefficient d'extinction molaire de la nitrocéfine à 482 nm, 17400 M-1cm-1. 
+
 ## Analyse de cinetique.
 
 La vitesse d'une enzyme Michaelienne est donnée par la formule v = kcat.[E].([S]/(Km+[S])) où v est la vitesse, [E] la concentration en substrat, [S] la concentration en substrat, kcat la constante de vitesse et Km la constante de Michaelis. kcat représente la vitesse a laquelle l'enzyme effectue sa réaction. Km est une mesure de l'affinitié de l'enzyme pour son substrat: au plus Km est bas, au plus l'affinité de l'enzyme pour son substrat est élevée.
@@ -40,6 +79,7 @@ Un bon réflexe avec de nouvelles données est de commencer par les répresenter
 
 plot(test.df$concentration, test.df$vitesse)
 ```
+
 On voit bien la tendance décrite plus haut, où la vitesse augmente quand la concentration en substrat augmente avant d'atteindre un plateau. Afin d'en déduire les paramètre michaelien, nous allons demander à R de fitter l'équation de MM aux données à l'aide d'un ajustement des moindres carrés non linéaire ("nonlinear least-squares fitting").Contrairement à la régression linéaire, il n'y a pas de solution analytique, les paramètre sont optimisés sur base de valeurs que nous estimons à l'oeuil. Ici nous voyons que la vitesse maximale est d'environ 6 et le Km (la concentration où V = Vmax/2) environ 5. La fonction nls() retourne un objet modèle que nous pouvons interroger pour obtenir les paramètres Michaelien.
 
 
@@ -52,46 +92,8 @@ Pour tester la validité des paramètres, nous pouvons calculer la vitesse théo
 
 ```{r echo=FALSE}
 plot(test.df$concentration, test.df$vitesse)
-x <- c(0:100)
-y <- (6.069*x/(4.701+x))
+x <- c(0:100) # x représente un range de concentration pour laquelle nous calculerons la vitesse théorique. Si vous changez cela pour vos valeur, modifier cela pour couvrir un range qui couvre vos concentrations. Attention c(a:b) ne donne que les entier entre a et b.
+y <- (6.069*x/(4.701+x)) #On calcule ici les vitesse théorique à l'aide des Km et Vmax obtenu plus haut et du range de concentration théorique.
 lines(x, y, lty="dotted", col="red")
 
 ```
-
-## Determination des vitesses
-
-Les vitesses initiales sont déterminée en prenant la pente initiale. Cela peut être fait sur excel, mais également sur R. 
-
-```{r}
-dossier <- "C:/Users/worms/Desktop/LBIO1322"
-data <- read.csv(paste(dossier,"1218.CSV",sep = "/"),
-                 skip = 21, #Le début du fichier contient des détails sur l'expérience
-                 ) %>%
-            head(.,-2) %>% #Les deux dernières lignes ne contiennent pas de données 
-            select(.,1:2) %>% #Prend les deux premières colonnes
-            rename(.,"time" = "HH.MM.SS", "abs" = "Abs") #renomme les colonnes
-
-#Le temps est exprimé dans un format compliqué, mais il peut être converti en un objet "temp". On peut ensuite extraire les minutes et les secondes. mutate() permet de modifier un data frame
-data <- data %>% 
-            mutate(time = strptime(time, format = "%H:%M:%S")) %>%
-            mutate(time = minute(time)*60 + second(time))
-
-#On peut ensuite faire un graphe pour choisir la section linéaire de la courbe
-
-plot(data$time,data$abs)
-
-#Puis faire une regression linéaire sur la section d'intérêt 
-regressionLineaire <- data %>% 
-      filter(time >= 10) %>%
-      filter(time <= 20) %>%
-      lm(abs ~time ,.)
-      
-# On peut trouver la pente en allant voir les coefficient:
-regressionLineaire$coefficients
-
-#Et verifier sur le graphe que ça colle
-plot(data$time,data$abs)
-abline(regressionLineaire)
-```
-
-Attention que la vitesse obtenue est une vitesse en absorbance/seconde. Pour trouver la vitesse en mol/seconde, vous devez utiliser le coefficient d'extinction molaire de la nitrocéfine à 482 nm, 15900 M-1cm-1. 
