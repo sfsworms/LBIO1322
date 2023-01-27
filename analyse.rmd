@@ -31,7 +31,7 @@ data <- data %>%
 
 plot(data$time,data$abs)
 
-#Puis faire une regression linéaire sur la section d'intérêt 
+#Puis faire une regression linéaire sur la section d'intérêt. Le code ci-dessous ne prend en compte que les données entre les deux filtres (ici 10 et 20 sec par défaut). Ces filtre doivent être modifier pour prendre la section linéaire du graphe.
 regressionLineaire <- data %>% 
       filter(time >= 10) %>%
       filter(time <= 20) %>%
@@ -77,23 +77,25 @@ Un bon réflexe avec de nouvelles données est de commencer par les répresenter
 ```{r plot}
 #Pour accéder aux données au sein d'un data frame, on peut utiliser l'opérateur '$'. 
 
-plot(test.df$concentration, test.df$vitesse)
+plot(mm$conc,mm$rate)
 ```
 
 On voit bien la tendance décrite plus haut, où la vitesse augmente quand la concentration en substrat augmente avant d'atteindre un plateau. Afin d'en déduire les paramètre michaelien, nous allons demander à R de fitter l'équation de MM aux données à l'aide d'un ajustement des moindres carrés non linéaire ("nonlinear least-squares fitting").Contrairement à la régression linéaire, il n'y a pas de solution analytique, les paramètre sont optimisés sur base de valeurs que nous estimons à l'oeuil. Ici nous voyons que la vitesse maximale est d'environ 6 et le Km (la concentration où V = Vmax/2) environ 5. La fonction nls() retourne un objet modèle que nous pouvons interroger pour obtenir les paramètres Michaelien.
 
 
 ```{r}
-mm.nls <- nls(test.df$vitesse ~ (Vmax * test.df$concentration / (Km + test.df$concentration)), data=test.df, start=list(Km=5, Vmax=6)) 
+mm.nls <- nls(mm$rate ~ (Vmax * mm$conc / (Km + mm$conc)), data=mm, start=list(Km=4, Vmax=3)) 
 summary(mm.nls)
 ```
 
 Pour tester la validité des paramètres, nous pouvons calculer la vitesse théorique pour chaque concentration et rajouter celà sur le graphique.
 
 ```{r echo=FALSE}
-plot(test.df$concentration, test.df$vitesse)
-x <- c(0:100) # x représente un range de concentration pour laquelle nous calculerons la vitesse théorique. Si vous changez cela pour vos valeur, modifier cela pour couvrir un range qui couvre vos concentrations. Attention c(a:b) ne donne que les entier entre a et b.
-y <- (6.069*x/(4.701+x)) #On calcule ici les vitesse théorique à l'aide des Km et Vmax obtenu plus haut et du range de concentration théorique.
+plot(mm$conc,mm$rate)
+x <- c(0:500) # x représente un range de concentration pour laquelle nous calculerons la vitesse théorique. Si vous changez cela pour vos valeur, modifier cela pour couvrir un range qui couvre vos concentrations. Attention c(a:b) ne donne que les entier entre a et b.
+y <- (3.51533*x/(1.08707+x)) #On calcule ici les vitesse théorique à l'aide des Km et Vmax obtenu plus haut et du range de concentration théorique.
 lines(x, y, lty="dotted", col="red")
+
+read.csv("Z:/Encadrement/Assistanat/Q2/LBIO1322/R Code/mm.csv") -> mm
 
 ```
