@@ -101,11 +101,9 @@ Pour tester la validité des paramètres, nous pouvons calculer la vitesse théo
 ```{r echo=FALSE}
 plot(mm$conc,mm$rate)
 x <- c(0:500) # x représente un range de concentration pour laquelle nous calculerons la vitesse théorique. Si vous changez cela pour vos valeur, modifier cela pour couvrir un range qui couvre vos concentrations. Attention c(a:b) ne donne que les entier entre a et b.
-y <- (3.51533*x/(1.08707+x)) #On calcule ici les vitesse théorique à l'aide des Km et Vmax obtenu plus haut et du range de concentration théorique.
+y <- (3.51533*x/(1.08707+x)) #On calcule ici les vitesse théorique à l'aide des Km et Vmax obtenu plus haut et du range de concentration théorique. Il faut changer la valeur des Km et Vmax
 lines(x, y, lty="dotted", col="red")
-
-read.csv("Z:/Encadrement/Assistanat/Q2/LBIO1322/R Code/mm.csv") -> mm
 
 ```
 
-
+nls() peut être adapté pour trouver le Ki en plus des Km et Vmax si on lui fourni un data frame contenant des valeurs de vitesses à différentes concentration en substrats et inhibiteurs. L'adaptation de nls() est laissée comme exercice.
