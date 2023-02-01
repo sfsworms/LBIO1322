@@ -11,18 +11,18 @@ library(tidyverse)
 
 ## Determination des vitesses
 
-Les vitesses initiales sont déterminée en prenant la pente initiale. Cela peut être fait sur excel, mais également sur R. 
+Les vitesses initiales sont déterminée en prenant la pente initiale. Cela peut être fait sur excel, mais également sur R. Le code ci-dessous permet de le faire sur R.
 
 ```{r}
-dossier <- "C:/Users/worms/Desktop/LBIO1322"
-data <- read.csv(paste(dossier,"1218.CSV",sep = "/"),
+dossier <- "C:/Users/worms/Desktop/LBIO1322" #Dossier contenant les .csv généré par le spectrophotomètre
+data <- read.csv(paste(dossier,"1218.CSV",sep = "/"), #Remplacer par le nom du fichier.
                  skip = 21, #Le début du fichier contient des détails sur l'expérience
                  ) %>%
             head(.,-2) %>% #Les deux dernières lignes ne contiennent pas de données 
             select(.,1:2) %>% #Prend les deux premières colonnes
             rename(.,"time" = "HH.MM.SS", "abs" = "Abs") #renomme les colonnes
 
-#Le temps est exprimé dans un format compliqué, mais il peut être converti en un objet "temp". On peut ensuite extraire les minutes et les secondes. mutate() permet de modifier un data frame
+#Le temps est exprimé dans un format compliqué, mais il peut être converti en un objet "temp". On peut ensuite extraire les minutes et les secondes. mutate() permet de modifier une colone d'un df. Ceci donnera le temps en seconde
 data <- data %>% 
             mutate(time = strptime(time, format = "%H:%M:%S")) %>%
             mutate(time = lubridate::minute(time)*60 + lubridate::second(time))
@@ -33,19 +33,19 @@ plot(data$time,data$abs)
 
 #Puis faire une regression linéaire sur la section d'intérêt. Le code ci-dessous ne prend en compte que les données entre les deux filtres (ici 10 et 20 sec par défaut). Ces filtre doivent être modifier pour prendre la section linéaire du graphe.
 regressionLineaire <- data %>% 
-      filter(time >= 10) %>%
-      filter(time <= 20) %>%
+      filter(time >= 10) %>% #Début de la section linéaire en seconde
+      filter(time <= 20) %>% #Fin de la section linéaire
       lm(abs ~time ,.)
       
 # On peut trouver la pente en allant voir les coefficient:
 regressionLineaire$coefficients
 
-#Et verifier sur le graphe que ça colle
+#Et verifier sur graphiquement que la tangente est correct. 
 plot(data$time,data$abs)
 abline(regressionLineaire)
 ```
 
-Attention que la vitesse obtenue est une vitesse en absorbance/seconde. Pour trouver la vitesse en mol/seconde, vous devez utiliser le coefficient d'extinction molaire de la nitrocéfine à 482 nm, 17400 M-1cm-1. 
+Attention que la vitesse obtenue est une vitesse en absorbance/seconde. Pour trouver la vitesse en mol/seconde, vous devez utiliser l'augmentation du coefficient d'extinction molaire de la nitrocéfine à 482 nm lors de l'hydrolyse, 17400 M-1cm-1. 
 
 ## Analyse de cinetique.
 
@@ -64,12 +64,13 @@ Un exemple avec des données fictives va être dévellopé ci-dessous. Le code e
 
 #Ici nous entrons simplement une série de vitesse et de concentration que nous allons utiliser. Nous les entrons ensuite dans un data frame pour faciliter l'utilisation. 
 
-vitesse <- c(0.6,1.1,2.1,2.3,3.7,3.,4.3,4.8,5.3,6.0,5.1,5.7,5.8)
+vitesse <- c(0.6,1.1,2.1,2.3,3.7,3.,4.3,4.8,5.3,6.0,5.1,5.7,5.8) 
 concentration <- c(0.5,1,2.5,3.5,5,7.5,10,15,25,50,70,75,100)
 
-test.df <- data.frame(concentration, vitesse) 
+mm.df <- data.frame(concentration, vitesse) 
+colnames(mm.df) <- c("conc", "vitesse")
 
-test.df
+mm.df
 ```
 
 Un bon réflexe avec de nouvelles données est de commencer par les répresenter sur un graphique.
@@ -77,14 +78,21 @@ Un bon réflexe avec de nouvelles données est de commencer par les répresenter
 ```{r plot}
 #Pour accéder aux données au sein d'un data frame, on peut utiliser l'opérateur '$'. 
 
-plot(mm$conc,mm$rate)
+plot(mm.df$conc,mm.df$vitesse)
 ```
 
-On voit bien la tendance décrite plus haut, où la vitesse augmente quand la concentration en substrat augmente avant d'atteindre un plateau. Afin d'en déduire les paramètre michaelien, nous allons demander à R de fitter l'équation de MM aux données à l'aide d'un ajustement des moindres carrés non linéaire ("nonlinear least-squares fitting").Contrairement à la régression linéaire, il n'y a pas de solution analytique, les paramètre sont optimisés sur base de valeurs que nous estimons à l'oeuil. Ici nous voyons que la vitesse maximale est d'environ 6 et le Km (la concentration où V = Vmax/2) environ 5. La fonction nls() retourne un objet modèle que nous pouvons interroger pour obtenir les paramètres Michaelien.
+On voit bien la tendance décrite plus haut, où la vitesse augmente quand la concentration en substrat augmente avant d'atteindre un plateau. Afin d'en déduire les paramètre michaelien, nous allons demander à R de fitter l'équation de MM aux données à l'aide d'un ajustement des moindres carrés non linéaire ("nonlinear least-squares fitting").Contrairement à la régression linéaire, il n'y a pas de solution analytique, les paramètre sont optimisés sur base de valeurs que nous estimons à l'oeuil. Ici nous voyons que la vitesse maximale est d'environ 6 et le Km (la concentration où V = Vmax/2) environ 5. 
+
+La fonction nls() trouve les paramètre qui font coller les valeurs de vitesse prévue aux vitesses expérimentales. L'argument "formula" contient la formule du modèle, "data" contient le data frame et "start" est une liste des estimations initiales des paramètres. 
+
+
 
 
 ```{r}
-mm.nls <- nls(mm$rate ~ (Vmax * mm$conc / (Km + mm$conc)), data=mm, start=list(Km=4, Vmax=3)) 
+mm.nls <- nls(formula = mm.df$vitesse ~ (Vmax * mm.df$conc / (Km + mm.df$conc)), 
+              data=  mm.df, 
+              start = list(Km=4, Vmax=3)) 
+
 summary(mm.nls)
 ```
 
@@ -99,3 +107,5 @@ lines(x, y, lty="dotted", col="red")
 read.csv("Z:/Encadrement/Assistanat/Q2/LBIO1322/R Code/mm.csv") -> mm
 
 ```
+
+
